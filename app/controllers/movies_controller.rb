@@ -53,41 +53,44 @@ class MoviesController < ApplicationController
     @movie = Movie.find(id) # look up movie by unique ID
     # will render app/views/movies/show.<extension> by default
   end
-
+  
   def index
-    
-    @sort = params[:sort] || session[:sort]
-    
-    session[:ratings] = session[:ratings] || @all_ratings
-    
     @all_ratings = Movie.all_ratings
     
-    @ratings = params[:ratings] || session[:ratings]
-    session[:sort] = @sort
-    session[:ratings] = @ratings
+    # current setting from params or session
+    sort = params[:sort] || session[:sort]
+    @ratings_to_show = params[:ratings] || session[:ratings] || Hash[@all_ratings.map { |r| [r, 1] }]
     
-    
-    if @ratings == nil
-      @ratings = Hash.new
-      @all_ratings.each do |m|
-        @ratings[m] = 0
-      end
+    # redirect_to
+    if !params[:commit].nil? or params[:ratings].nil? or (params[:sort].nil? && !session[:sort].nil?)
+      flash.keep
+      redirect_to movies_path :sort => sort, :ratings => @ratings_to_show
     end
     
-    @ratings_to_show = @ratings
-
-    if @ratings != nil && @sort != nil
-      @movies = Movie.with_ratings(session[:ratings].keys).order(session[:sort])
-    elsif   @ratings != nil
-      @movies = Movie.with_ratings(@ratings.keys)
-    else
-     @movies = Movie.all
-    end
+    toggle() 
+    remember()
     
   end
   
-  def sort_column
-    @movies = Movie.all_ratings
+  def toggle
+    # the toggled column
+    sort = params[:sort] || session[:sort]
+    case sort
+    when 'title'
+      ordering, @title_class = {:title => :asc}, 'hilite'
+    when 'release_date'
+      ordering, @release_class = {:release_date => :asc}, 'hilite'
+    end
+    
+    # movies from Movie
+    @movies = Movie.with_ratings(@ratings_to_show.keys).order(ordering)
+  end
+  
+  def remember
+    # current setting to session
+    sort = params[:sort] || session[:sort]
+    session[:sort] = sort
+    session[:ratings] = @ratings_to_show
   end
 
   def new

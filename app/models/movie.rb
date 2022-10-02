@@ -1,11 +1,10 @@
 class Movie < ActiveRecord::Base
-  
+  # all_ratings method
   def self.all_ratings
-    ['G','PG','PG-13','R']
+      pluck(:rating).uniq
   end
- 
-  def self.with_ratings(ratings_list)
-   where(rating: ratings_list )
+  # with_ratings method 
+  def self.with_ratings(ratings)
+      where("LOWER(rating) IN (?)", ratings.map(&:downcase))
   end
-  
 end
